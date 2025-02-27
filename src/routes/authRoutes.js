@@ -11,7 +11,8 @@ router.get('/google',
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL + '/login' }),
   (req, res) => {
-    res.redirect(process.env.CLIENT_URL + '/notes');
+    // Add a success flag or timestamp to help the client detect a fresh login
+    res.redirect(`${process.env.CLIENT_URL}/notes?auth=success&t=${Date.now()}`);
   }
 );
 
