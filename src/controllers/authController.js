@@ -35,7 +35,8 @@ exports.googleCallback = async (accessToken, refreshToken, profile, done) => {
     // Set token as HttpOnly cookie
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // use true in production with HTTPS
+      secure: true, // use true in production with HTTPS
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 3600000 // 1 hour in milliseconds
     });
     res.redirect(process.env.CLIENT_URL);
