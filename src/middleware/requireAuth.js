@@ -18,7 +18,6 @@ function requireAuth(req, res, next) {
   // 2. Check for JWT in cookies
   if (req.headers.cookie && req.headers.cookie.includes('jwt=')) {
     try {
-      // Extract JWT from cookie string
       const cookies = req.headers.cookie.split(';').map(c => c.trim());
       const jwtCookie = cookies.find(c => c.startsWith('jwt='));
       if (jwtCookie) {
@@ -30,11 +29,9 @@ function requireAuth(req, res, next) {
       }
     } catch (err) {
       console.error('JWT cookie verification failed:', err.message);
-      // Continue to next authentication method
     }
   }
 
-  // 3. Check for JWT in Authorization header
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
