@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
     const newNotebook = new Notebook({
       title: req.body.title || 'Untitled',
       notes: [],
-      users: [req.user._id]  // Assign the notebook only to the current user
+      users: [req.user._id] 
     });
     await newNotebook.save();
 
@@ -60,7 +60,6 @@ router.delete('/:id', async (req, res) => {
     const notebook = await Notebook.findOneAndDelete({ _id: req.params.id, users: req.user._id });
     if (!notebook) return res.status(404).json({ error: 'Notebook not found.' });
 
-    // Optionally, delete all notes referenced by this notebook:
     if (notebook.notes && notebook.notes.length > 0) {
       await Note.deleteMany({ _id: { $in: notebook.notes } });
     }
@@ -84,7 +83,6 @@ router.post('/:id/notes', async (req, res) => {
       return res.status(404).json({ error: 'Notebook not found' });
     }
 
-    // Create the new note
     const newNote = new Note({
       title: req.body.title || 'Untitled',
       content: req.body.content || [''],
@@ -92,17 +90,15 @@ router.post('/:id/notes', async (req, res) => {
       user: req.user._id
     });
 
-    // Save the new note
     await newNote.save();
 
     // Add note reference to the notebook
     notebook.notes.push(newNote._id);
     await notebook.save();
 
-    // Return the created note
     const populatedNote = await Note.findById(newNote._id);
 
-    // Emit socket event if needed
+    
     const io = req.app.get('io');
     if (io) {
       io.emit('notebooksUpdated', { 
@@ -122,25 +118,24 @@ router.post('/:id/notes', async (req, res) => {
 // PUT /notebooks/:id/notes/:noteId - Update a note
 router.put('/:id/notes/:noteId', async (req, res) => {
   try {
-    // Log the request for debugging
+  
     console.log('Update note request:', {
       notebookId: req.params.id,
       noteId: req.params.noteId,
       body: req.body
     });
 
-    // First find the notebook
     const notebook = await Notebook.findById(req.params.id);
     if (!notebook) {
       return res.status(404).json({ error: 'Notebook not found' });
     }
 
-    // Check if the user has access to this notebook
+  
     if (!notebook.users.includes(req.user._id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Find and update the note
+   
     const note = await Note.findOneAndUpdate(
       {
         _id: req.params.noteId,
@@ -173,11 +168,11 @@ router.delete('/:id/notes/:noteId', async (req, res) => {
     const notebook = await Notebook.findOne({ _id: req.params.id, users: req.user._id });
     if (!notebook) return res.status(404).json({ error: 'Notebook not found.' });
 
-    // Remove the note's ObjectId from the notebook's notes array
+
     notebook.notes = notebook.notes.filter(nId => nId.toString() !== req.params.noteId);
     await notebook.save();
 
-    // Optionally delete the note document itself:
+   
     const note = await Note.findOneAndDelete({ _id: req.params.noteId });
 
     const io = req.app.get('io');

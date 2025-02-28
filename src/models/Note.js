@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const noteSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
-    auto: true, // Let MongoDB generate this
+    auto: true,
     required: true
   },
   title: {
@@ -37,7 +37,7 @@ const noteSchema = new mongoose.Schema({
   }
 });
 
-// Add indexes for better query performance
+
 noteSchema.index({ notebook: 1, user: 1 });
 
 module.exports = mongoose.model('Note', noteSchema);

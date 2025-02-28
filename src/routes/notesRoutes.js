@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/requireAuth');
-const Note = require('../models/Note'); // Ensure you have defined a Note model
+const Note = require('../models/Note'); 
 
 // All routes here require a valid JWT token
 router.use(requireAuth);
@@ -19,11 +19,10 @@ router.get('/', async (req, res) => {
 // POST /notes - Create a new note
 router.post('/', async (req, res) => {
   try {
-    // Create new note with data from the request body and current user ID
     const note = new Note({ ...req.body, user: req.user._id });
     await note.save();
 
-    // Emit Socket.IO event for real-time update (assuming io is attached to the app)
+
     const io = req.app.get('io');
     if (io) io.emit('notesUpdated', { action: 'create', note });
 

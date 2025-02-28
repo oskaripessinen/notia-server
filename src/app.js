@@ -15,9 +15,9 @@ const app = express();
 
 // CORS configuration (must be placed high before any routes)
 app.use(cors({
-  origin: process.env.CLIENT_URL, // Your React app URL
+  origin: process.env.CLIENT_URL,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true, // Allow cookies/session
+  credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 204,
 }));
@@ -34,7 +34,7 @@ mongoose.connect(process.env.MONGO_URL)
 
 // Session middleware
 app.use(session({
-  secret: 'your_secret_key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
 }));
@@ -49,7 +49,7 @@ passport.serializeUser((user, done) => {
 });
 passport.deserializeUser(async (id, done) => {
   try {
-    const User = require('./models/User'); // Ensure the User model exists
+    const User = require('./models/User');
     const user = await User.findById(id);
     done(null, user);
   } catch (err) {
@@ -76,7 +76,7 @@ const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL, // Your client URL
+    origin: process.env.CLIENT_URL,
     methods: ['GET', 'POST']
   }
 });
@@ -84,15 +84,13 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('New client connected: ', socket.id);
 
-  // You can listen for events from client if needed:
+
   socket.on('disconnect', () => {
     console.log('Client disconnected: ', socket.id);
   });
 });
 
-// Example: When notes are updated, you can emit an event to all clients.
-// In your notesRoutes or controllers, after updating data, use:
-// io.emit('notesUpdated', updatedData);
+
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

@@ -7,7 +7,7 @@ function authenticateJWT(req, res, next) {
     const token = authHeader.split(' ')[1];
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) {
-        return res.sendStatus(403); // Forbidden if token is invalid
+        return res.sendStatus(403); 
       }
       req.user = user;
       next();

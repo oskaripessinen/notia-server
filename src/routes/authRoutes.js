@@ -11,12 +11,10 @@ router.get('/google',
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL + '/login' }),
   (req, res) => {
-    // Add a success flag or timestamp to help the client detect a fresh login
     res.redirect(`${process.env.CLIENT_URL}/notes?auth=success&t=${Date.now()}`);
   }
 );
 
-// Check authentication status
 router.get('/status', (req, res) => {
   res.json({ 
     authenticated: req.isAuthenticated(),
@@ -43,7 +41,7 @@ router.post('/google/verify', async (req, res) => {
       return res.status(400).json({ error: 'No credential provided' });
     }
     
-    // Debug: Log the type of verifyGoogleToken
+
     console.log('Type of verifyGoogleToken:', typeof verifyGoogleToken);
     
     // Verify and decode Google token
