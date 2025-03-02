@@ -9,15 +9,18 @@ const authRoutes = require('./routes/authRoutes');
 const authController = require('./controllers/authController');
 const cors = require('cors');
 const notebookRoutes = require('./routes/notebookRoutes');
-
+const MongoStore = require('connect-mongo');
 
 const app = express();
+
+// Trust proxy for correct cookie handling in Render
+app.set("trust proxy", 1);
 
 // CORS configuration (must be placed high before any routes)
 app.use(cors({
   origin: process.env.CLIENT_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 204,
 }));
@@ -29,17 +32,26 @@ app.use(express.urlencoded({ extended: true }));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.log(err));
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
-// Session middleware
+// Session middleware with MongoDB storage
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URL,
+    collectionName: 'sessions'
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Only HTTPS in production
+    sameSite: "none" // Adjust to "none" if frontend is on a different domain
+  }
 }));
 
-// Initialize Passport
+// Initialize Passport (AFTER session middleware)
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -67,6 +79,7 @@ passport.use(new GoogleStrategy({
   authController.googleCallback
 ));
 
+// Routes
 app.use('/auth', authRoutes);
 app.use('/notebooks', notebookRoutes);
 
@@ -83,14 +96,10 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
   console.log('New client connected: ', socket.id);
-
-
   socket.on('disconnect', () => {
     console.log('Client disconnected: ', socket.id);
   });
 });
-
-
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
