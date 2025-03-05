@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
 
 exports.googleCallback = async (accessToken, refreshToken, profile, done) => {
   try {
@@ -20,26 +19,6 @@ exports.googleCallback = async (accessToken, refreshToken, profile, done) => {
     if (!user) {
       return done(new Error('Failed to create/find user'), null);
     }
-
-    // Generate a JWT token for the authenticated user
-    const token = jwt.sign(
-      {
-        _id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    // Set token as HttpOnly cookie
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: true, 
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 3600000 
-    });
-    res.redirect(process.env.CLIENT_URL);
 
     return done(null, user);
   } catch (error) {

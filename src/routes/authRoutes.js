@@ -40,7 +40,6 @@ router.post('/google/verify', async (req, res) => {
     if (!credential) {
       return res.status(400).json({ error: 'No credential provided' });
     }
-    
 
     console.log('Type of verifyGoogleToken:', typeof verifyGoogleToken);
     
