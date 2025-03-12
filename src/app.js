@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const authController = require('./controllers/authController');
 const cors = require('cors');
 const notebookRoutes = require('./routes/notebookRoutes');
+const userRoutes = require('./routes/userRoutes');
 const MongoStore = require('connect-mongo');
 
 const app = express();
@@ -83,6 +84,7 @@ passport.use(new GoogleStrategy({
 // Routes
 app.use('/auth', authRoutes);
 app.use('/notebooks', notebookRoutes);
+app.use('/users', userRoutes);
 
 // Integrate Socket.IO below
 const http = require('http');
