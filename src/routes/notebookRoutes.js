@@ -152,6 +152,21 @@ router.put('/:id/notes/:noteId', async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
+    // After successful update, emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`notebook:${req.params.id}`).emit('note-updated', {
+        noteId: req.params.noteId,
+        title: req.body.title,
+        content: req.body.content,
+        updatedBy: {
+          userId: req.user._id,
+          email: req.user.email
+        },
+        timestamp: new Date()
+      });
+    }
+
     res.json(note);
   } catch (err) {
     console.error('Error updating note:', err);
@@ -180,6 +195,122 @@ router.delete('/:id/notes/:noteId', async (req, res) => {
     res.json({ message: 'Note removed from notebook', note });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a new endpoint for sharing notebooks
+router.post('/:notebookId/share', requireAuth, async (req, res) => {
+  try {
+    const { notebookId } = req.params;
+    const { emails } = req.body;
+    
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ message: 'Invalid emails provided' });
+    }
+    
+    // Find the notebook
+    const notebook = await Notebook.findById(notebookId);
+    
+    if (!notebook) {
+      return res.status(404).json({ message: 'Notebook not found' });
+    }
+    
+    // Check if the current user has access to this notebook
+    if (!notebook.users.includes(req.user._id)) {
+      return res.status(403).json({ message: 'You do not have permission to share this notebook' });
+    }
+    
+    // Find existing users by email
+    const User = require('../models/User');
+    const userPromises = emails.map(async (email) => {
+      const user = await User.findOne({ email: email});
+      
+      if (!user) {
+        return { email, found: false };
+      }
+      
+      return { user, email, found: true };
+    });
+    
+    const results = await Promise.all(userPromises);
+    
+    // Filter out found users and add them to the notebook
+    const foundUsers = results.filter(result => result.found).map(result => result.user);
+    const notFoundEmails = results.filter(result => !result.found).map(result => result.email);
+    
+    // Add the new users to the notebook (prevent duplicates with Set)
+    const currentUserIds = notebook.users.map(id => id.toString());
+    const newUserIds = foundUsers.map(user => user._id.toString());
+    const combinedUserIds = [...new Set([...currentUserIds, ...newUserIds])];
+    
+    // Update the notebook with the new users
+    notebook.users = combinedUserIds;
+    await notebook.save();
+    
+    // After successful share operation
+    const io = req.app.get('io');
+    if (io) {
+      // Notify all users who have access to this notebook
+      io.to(`notebook:${notebookId}`).emit('notebook-shared', {
+        notebookId,
+        sharedWith: emails,
+        sharedBy: req.user.email,
+        timestamp: new Date()
+      });
+    }
+    
+    // Return response with results
+    res.status(200).json({
+      success: true,
+      message: 'Notebook shared successfully',
+      notebook: {
+        _id: notebook._id,
+        title: notebook.title,
+        users: combinedUserIds
+      },
+      notFoundEmails: notFoundEmails
+    });
+    
+  } catch (error) {
+    console.error('Error sharing notebook:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add endpoint for removing users from a shared notebook
+router.delete('/:notebookId/share/:userId', requireAuth, async (req, res) => {
+  try {
+    const { notebookId, userId } = req.params;
+    
+    // Find the notebook
+    const notebook = await Notebook.findById(notebookId);
+    
+    if (!notebook) {
+      return res.status(404).json({ message: 'Notebook not found' });
+    }
+    
+    // Check if the current user has access to this notebook
+    if (!notebook.users.includes(req.user._id)) {
+      return res.status(403).json({ message: 'You do not have permission to modify sharing for this notebook' });
+    }
+    
+    // Remove the user from the notebook's users array
+    notebook.users = notebook.users.filter(id => id.toString() !== userId);
+    await notebook.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'User removed from shared notebook',
+      notebook: {
+        _id: notebook._id,
+        title: notebook.title,
+        users: notebook.users
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error removing user from shared notebook:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
