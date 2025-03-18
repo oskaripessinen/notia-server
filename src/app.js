@@ -21,7 +21,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Trust proxy for correct cookie handling in Render
-app.set("trust proxy", 1);
+app.set('trust proxy', 1);
 
 // CORS configuration (must be placed high before any routes)
 app.use(cors({
@@ -56,8 +56,8 @@ const sessionMiddleware = session({
   }),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", 
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === 'production', 
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 14 // 14 days
   },
   name: 'notia.sid' // Give the cookie a specific name
@@ -110,8 +110,8 @@ const io = new Server(server, {
 });
 
 // Debug socket connections
-io.engine.on("connection_error", (err) => {
-  console.log("Connection error:", err.req, err.code, err.message, err.context);
+io.engine.on('connection_error', (err) => {
+  console.log('Connection error:', err.req, err.code, err.message, err.context);
 });
 
 // Apply socket authentication middleware
