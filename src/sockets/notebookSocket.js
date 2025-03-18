@@ -84,53 +84,32 @@ const setupNotebookSockets = (io) => {
     // Handle note updates
     socket.on('note-update', async (data) => {
       try {
-        const { notebookId, noteId, title, content, lineChanges } = data;
-        
-        // Check if user has access to this notebook
-        const notebook = await Notebook.findOne({
-          _id: notebookId,
-          users: user._id
-        });
-        
+        console.log(`Note update requested for ${data.noteId}`);
+       
+        const notebook = await Notebook.findOne({ _id: data.notebookId, users: socket.request.user._id });
         if (!notebook) {
-          socket.emit('error', { message: 'Access denied to notebook' });
-          return;
+            throw new Error('Access denied to notebook');
         }
         
-        // Find the note and check if it belongs to this notebook
-        const note = await Note.findOne({
-          _id: noteId,
-          notebook: notebookId
-        });
-        
+        const note = await Note.findById(data.noteId);
         if (!note) {
-          socket.emit('error', { message: 'Note not found or does not belong to notebook' });
-          return;
+            throw new Error('Note not found');
         }
+       
+        note.title = data.title;
+        note.content = data.content;
+        const updatedNote = await note.save();
         
-        // Update the note in the database
-        if (title !== undefined) note.title = title;
-        if (content !== undefined) note.content = content;
-        await note.save();
-        
-        // Broadcast the update to other users in the room
-        const roomName = `notebook:${notebookId}`;
-        socket.to(roomName).emit('note-updated', {
-          noteId,
-          title,
-          content,
-          lineChanges, // Include specific line changes with line numbers
-          updatedBy: {
-            userId: user._id,
-            email: user.email
-          },
-          timestamp: new Date()
+        io.to('notebook:' + data.notebookId).emit('note-updated', {
+            noteId: updatedNote._id,
+            title: updatedNote.title,
+            content: updatedNote.content
         });
-      } catch (error) {
-        console.error('Error handling note update:', error);
+    } catch (error) {
+        console.error('Error updating note:', error);
         socket.emit('error', { message: 'Failed to update note' });
-      }
-    });
+    }
+});
     
     // Handle cursor position updates
     socket.on('cursor-position', (data) => {
