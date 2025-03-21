@@ -111,12 +111,11 @@ const setupNotebookSockets = (io) => {
     }
 });
     
-    // Handle cursor position updates
+   
     socket.on('cursor-position', (data) => {
       const { notebookId, noteId, position } = data;
       const roomName = `notebook:${notebookId}`;
       
-      // Broadcast cursor position to others in the room
       socket.to(roomName).emit('user-cursor', {
         userId: user._id,
         email: user.email,

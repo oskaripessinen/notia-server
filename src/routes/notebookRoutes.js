@@ -54,20 +54,27 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /notebooks/:id - Delete a notebook (and optionally its notes) for the authenticated user
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const notebook = await Notebook.findOneAndDelete({ _id: req.params.id, users: req.user._id });
-    if (!notebook) return res.status(404).json({ error: 'Notebook not found.' });
+    const { id } = req.params;
+    const userId = req.user._id;
 
-    if (notebook.notes && notebook.notes.length > 0) {
-      await Note.deleteMany({ _id: { $in: notebook.notes } });
+    // Check if notebook exists and user has access
+    const notebook = await Notebook.findOne({ _id: id, users: userId });
+    if (!notebook) {
+      return res.status(404).json({ error: 'Notebook not found or access denied' });
     }
-    const io = req.app.get('io');
-    if (io) io.emit('notebooksUpdated', { action: 'delete', notebookId: notebook._id });
-    res.json({ message: 'Notebook and its notes deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    // Delete all notes associated with the notebook
+    await Note.deleteMany({ notebook: id });
+
+    // Delete the notebook
+    await Notebook.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Notebook deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting notebook:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
